@@ -8,7 +8,14 @@
  */
 
 const express = require('express');
-const Database = require('better-sqlite3');
+const { Pool } = require('pg');
+
+const db = new Pool({
+  connectionString: process.env.SUPABASE_DB_URL,
+  ssl: {
+    rejectUnauthorized: false
+  }
+});
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const path = require('path');
@@ -252,7 +259,10 @@ function requireTeacherSession(req, res, next) {
 
 app.post('/api/login', (req, res) => {
   const { email, password } = req.body;
-  const user = db.prepare('SELECT * FROM users WHERE email = ?').get(email);
+  const result = await db.query(
+  'select * from users where email = $1',
+  [email]
+);
   if (!user || !bcrypt.compareSync(password || '', user.password)) {
     return res.status(401).json({ error: 'Invalid credentials' });
   }
