@@ -162,13 +162,20 @@ function logAudit(userId, subjectId, sessionId, action, details) {
 
 function generateQRToken(sessionId, subjectId) {
   const payload = {
-    sessionId,
-    subjectId,
-    created: Date.now(),
-    nonce: crypto.randomBytes(10).toString('hex')
+    sid: sessionId,
+    sub: subjectId,
+    iat: Date.now(),
+    n: crypto.randomBytes(5).toString('hex')
   };
+
   const payloadStr = Buffer.from(JSON.stringify(payload)).toString('base64url');
-  const signature = crypto.createHmac('sha256', SECRET_KEY).update(payloadStr).digest('hex');
+
+  const signature = crypto
+    .createHmac('sha256', SECRET_KEY)
+    .update(payloadStr)
+    .digest('base64url')
+    .slice(0, 32);
+
   return `${payloadStr}.${signature}`;
 }
 
@@ -176,12 +183,29 @@ function verifyQRToken(token) {
   try {
     const [payloadStr, signature] = String(token || '').split('.');
     if (!payloadStr || !signature) return null;
-    const expected = crypto.createHmac('sha256', SECRET_KEY).update(payloadStr).digest('hex');
-    const sigBuf = Buffer.from(signature, 'hex');
-    const expBuf = Buffer.from(expected, 'hex');
-    if (sigBuf.length !== expBuf.length) return null;
-    if (!crypto.timingSafeEqual(sigBuf, expBuf)) return null;
-    return JSON.parse(Buffer.from(payloadStr, 'base64url').toString('utf8'));
+
+    const expectedShort = crypto
+      .createHmac('sha256', SECRET_KEY)
+      .update(payloadStr)
+      .digest('base64url')
+      .slice(0, 32);
+
+    const expectedOldHex = crypto
+      .createHmac('sha256', SECRET_KEY)
+      .update(payloadStr)
+      .digest('hex');
+
+    const ok = signature === expectedShort || signature === expectedOldHex;
+    if (!ok) return null;
+
+    const payload = JSON.parse(Buffer.from(payloadStr, 'base64url').toString('utf8'));
+
+    return {
+      sessionId: payload.sessionId || payload.sid,
+      subjectId: payload.subjectId || payload.sub,
+      created: payload.created || payload.iat,
+      nonce: payload.nonce || payload.n
+    };
   } catch {
     return null;
   }
