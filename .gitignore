@@ -1,5 +1,12 @@
-node_modules
+# Dependencies
+node_modules/
+
+# Environment variables / secrets
 .env
-attendx.db
-attendx.db-shm
-attendx.db-wal
+
+# Local database files
+*.db
+*.sqlite
+*.sqlite3
+*.db-shm
+*.db-wal
