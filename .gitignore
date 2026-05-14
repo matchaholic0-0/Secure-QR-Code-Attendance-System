@@ -1,6 +1,5 @@
-node_modules/
-*.db
-*.db-shm
-*.db-wal
+node_modules
 .env
-.env.local
+attendx.db
+attendx.db-shm
+attendx.db-wal
